@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Xbox 360 — Live</title>
+<style>
+  /* ========== BASE ========== */
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  :root {
+    --green: #9dff00;
+    --green-dim: #6fb800;
+    --bg: #0a0a0a;
+    --panel: #111;
+  }
+  body {
+    background: radial-gradient(circle at 50% 30%, #1a2a0a 0%, #050505 70%);
+    color: #fff;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  button { cursor: pointer; font-family: inherit; }
+  input, textarea { font-family: inherit; }
+
+  /* ========== AUTH SCREEN ========== */
+  #auth {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle, #123 0%, #000 80%);
+    z-index: 100;
+  }
+  .auth-box {
+    background: rgba(0,0,0,.6);
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 40px;
+    width: 360px;
+    box-shadow: 0 0 40px rgba(157,255,0,.4);
+  }
+  .auth-box h1 {
+    color: var(--green);
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 28px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 12px var(--green);
+  }
+  .auth-box input {
+    width: 100%; padding: 12px; margin: 8px 0;
+    background: #000; border: 1px solid #333; color: #fff;
+    border-radius: 6px; font-size: 15px;
+  }
+  .auth-box input:focus { outline: none; border-color: var(--green); }
+  .auth-box button {
+    width: 100%; padding: 12px; margin-top: 12px;
+    background: var(--green); color: #000; border: none;
+    border-radius: 6px; font-weight: bold; font-size: 15px;
+    transition: .2s;
+  }
+  .auth-box button:hover { background: #b8ff33; }
+  .auth-toggle {
+    text-align: center; margin-top: 15px; color: #888; font-size: 13px;
+  }
+  .auth-toggle span { color: var(--green); cursor: pointer; }
+  .auth-err { color: #ff4444; text-align: center; margin-top: 10px; font-size: 13px; }
+
+  /* ========== DASHBOARD ========== */
+  #dash { display: none; height: 100vh; flex-direction: column; }
+  #dash.active { display: flex; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 15px;
+    padding: 12px 20px;
+    background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
+    border-bottom: 2px solid var(--green);
+  }
+  .topbar .logo { color: var(--green); font-weight: bold; font-size: 20px; letter-spacing: 1px; }
+  .topbar .spacer { flex: 1; }
+  .topbar .user-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: #000; padding: 6px 12px; border-radius: 20px;
+    border: 1px solid #333;
+  }
+  .topbar .user-chip img {
+    width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
+    background: #222;
+  }
+  .topbar button {
+    background: #222; color: #fff; border: 1px solid #444;
+    padding: 6px 14px; border-radius: 6px; font-size: 13px;
+  }
+  .topbar button:hover { background: #333; }
+
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Blades sidebar */
+  .blades {
+    width: 240px; background: #0a0a0a; border-right: 2px solid #1f1f1f;
+    padding: 20px 0; overflow-y: auto;
+  }
+  .blade {
+    padding: 14px 20px; color: #aaa; cursor: pointer;
+    border-left: 4px solid transparent; transition: .15s;
+    display: flex; align-items: center; gap: 12px; font-size: 15px;
+  }
+  .blade:hover { background: #141414; color: #fff; }
+  .blade.active { background: linear-gradient(90deg, rgba(157,255,0,.15), transparent); color: var(--green); border-left-color: var(--green); }
+  .blade .icon { font-size: 20px; }
+
+  .content { flex: 1; padding: 30px; overflow-y: auto; }
+  .content h2 { color: var(--green); margin-bottom: 20px; font-size: 24px; letter-spacing: 1px; }
+  .app { display: none; }
+  .app.active { display: block; }
+
+  /* Generic cards / buttons */
+  .card {
+    background: #141414; border: 1px solid #222; border-radius: 10px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .btn {
+    background: var(--green); color: #000; border: none;
+    padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 14px;
+  }
+  .btn:hover { background: #b8ff33; }
+  .btn.secondary { background: #222; color: #fff; border: 1px solid #444; }
+  .btn.secondary:hover { background: #333; }
+  .btn.danger { background: #c33; color: #fff; }
+  .input, .textarea {
+    width: 100%; padding: 10px; background: #000; color: #fff;
+    border: 1px solid #333; border-radius: 6px; font-size: 14px;
+  }
+  .input:focus, .textarea:focus { outline: none; border-color: var(--green); }
+  .row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .row > * { flex: 1; }
+
+  /* Chat */
+  .chat-box {
+    height: 420px; overflow-y: auto; background: #0a0a0a;
+    border: 1px solid #222; border-radius: 8px; padding: 12px;
+    margin-bottom: 12px;
+  }
+  .msg { display: flex; gap: 10px; margin-bottom: 12px; }
+  .msg img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #222; flex-shrink: 0; }
+  .msg .body { flex: 1; }
+  .msg .name { color: var(--green); font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  .msg .text { color: #ddd; font-size: 14px; word-wrap: break-word; }
+  .msg .time { color: #555; font-size: 11px; margin-left: 6px; }
+
+  /* Store grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+  .app-card {
+    background: #141414; border: 1px solid #222; border-radius: 10px;
+    padding: 12px; text-align: center; transition: .15s;
+  }
+  .app-card:hover { border-color: var(--green); transform: translateY(-2px); }
+  .app-card img {
+    width: 72px; height: 72px; object-fit: cover; border-radius: 10px;
+    background: #222; margin-bottom: 8px;
+  }
+  .app-card .title { font-size: 14px; color: #fff; margin-bottom: 4px; }
+  .app-card a { color: var(--green); font-size: 12px; text-decoration: none; }
+
+  /* Soundboard */
+  .sounds { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .sound-btn {
+    background: #1a1a1a; border: 1px solid #333; color: #fff;
+    padding: 14px; border-radius: 8px; font-size: 13px;
+  }
+  .sound-btn:hover { background: var(--green); color: #000; }
+
+  /* Notification banner */
+  #owner-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--green); color: #000; text-align: center;
+    padding: 10px; font-weight: bold; z-index: 200;
+    transform: translateY(-100%); transition: .3s;
+  }
+  #owner-banner.show { transform: translateY(0); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ============== AUTH SCREEN ============== -->
+<div id="auth">
+  <div class="auth-box">
+    <h1 id="auth-title">XBOX 360</h1>
+
+    <input id="auth-user" placeholder="Username" autocomplete="off" />
+    <input id="auth-pass" type="password" placeholder="Password" autocomplete="off" />
+
+    <button id="auth-submit">Sign In</button>
+    <div class="auth-err" id="auth-err"></div>
+
+    <div class="auth-toggle">
+      <span id="auth-switch">No account? Sign up</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============== DASHBOARD ============== -->
+<div id="dash">
+  <div class="topbar">
+    <div class="logo">● XBOX 360</div>
+    <div class="spacer"></div>
+    <div class="user-chip">
+      <img id="top-pfp" src="" alt="" />
+      <span id="top-name">—</span>
+    </div>
+    <button id="btn-logout">Sign Out</button>
+  </div>
+
+  <div class="main">
+    <div class="blades" id="blades">
+      <div class="blade active" data-app="home"><span class="icon">🏠</span> Home</div>
+      <div class="blade" data-app="chat"><span class="icon">💬</span> Global Chat</div>
+      <div class="blade" data-app="dms"><span class="icon">✉️</span> Messages</div>
+      <div class="blade" data-app="friends"><span class="icon">👥</span> Friends</div>
+      <div class="blade" data-app="ai"><span class="icon">🤖</span> AI</div>
+      <div class="blade" data-app="store"><span class="icon">🛒</span> Store</div>
+      <div class="blade" data-app="sound"><span class="icon">🔊</span> Soundboard</div>
+      <div class="blade" data-app="custom"><span class="icon">🎨</span> Customize</div>
+      <div class="blade" data-app="owner" id="blade-owner" style="display:none"><span class="icon">👑</span> Owner Panel</div>
+    </div>
+
+    <div class="content">
+
+      <!-- HOME -->
+      <div class="app active" data-app="home">
+        <h2>Welcome, <span id="home-name">—</span></h2>
+        <div class="card">
+          <div style="font-size:14px;color:#aaa;">This is your dashboard. Use the blades on the left to navigate.</div>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;color:#888;">
+            ⚠️ <b>Demo Notice:</b> This is a frontend-only demo. Chats, DMs, accounts, and files are stored in your browser's localStorage and are not shared across devices.
+          </div>
+        </div>
+      </div>
+
+      <!-- GLOBAL CHAT -->
+      <div class="app" data-app="chat">
+        <h2>Global Chat</h2>
+        <div class="chat-box" id="global-chat"></div>
+        <div class="row">
+          <input class="input" id="global-input" placeholder="Type a message..." />
+          <button class="btn" id="global-send" style="flex:0 0 100px;">Send</button>
+        </div>
+      </div>
+
+      <!-- DMs -->
+      <div class="app" data-app="dms">
+        <h2>Private Messages</h2>
+        <div class="row">
+          <input class="input" id="dm-target" placeholder="Friend's username" />
+          <button class="btn" id="dm-open" style="flex:0 0 120px;">Open Chat</button>
+        </div>
+        <div id="dm-active" style="color:var(--green);margin-bottom:10px;font-size:13px;">No conversation open</div>
+        <div class="chat-box" id="dm-chat"></div>
+        <div class="row">
+          <input class="input" id="dm-input" placeholder="Type a private message..." disabled />
+          <button class="btn" id="dm-send" style="flex:0 0 100px;" disabled>Send</button>
+        </div>
+      </div>
+
+      <!-- FRIENDS -->
+      <div class="app" data-app="friends">
+        <h2>Friends</h2>
+        <div class="row">
+          <input class="input" id="friend-input" placeholder="Add by username" />
+          <button class="btn" id="friend-add" style="flex:0 0 120px;">Add Friend</button>
+        </div>
+        <div id="friends-list"></div>
+      </div>
+
+      <!-- AI -->
+      <div class="app" data-app="ai">
+        <h2>AI Assistant</h2>
+        <div class="card" style="border-color:#553;">
+          <div style="color:#ffb;font-size:13px;">
+            <b>Setup required:</b> To make this AI actually respond, paste your API endpoint + key below.
+            Without it, it runs in <b>echo mode</b> (repeats your message).
+            <br><br>
+            ⚠️ Never put a real API key in a public GitHub Pages site. It will be stolen. Use a backend proxy.
+          </div>
+        </div>
+        <div class="row">
+          <input class="input" id="ai-endpoint" placeholder="API endpoint (optional)" />
+          <input class="input" id="ai-key" placeholder="API key (optional)" type="password" />
+        </div>
+        <div class="chat-box" id="ai-chat"></div>
+        <div class="row">
+          <input class="input" id="ai-input" placeholder="Ask the AI..." />
+          <button class="btn" id="ai-send" style="flex:0 0 100px;">Send</button>
+        </div>
+      </div>
+
+      <!-- STORE -->
+      <div class="app" data-app="store">
+        <h2>Store</h2>
+        <div class="card">
+          <div style="color:var(--green);font-weight:bold;margin-bottom:10px;">Add an App</div>
+          <div class="row">
+            <input class="input" id="store-title" placeholder="App title" />
+            <input class="input" id="store-link" placeholder="App link (https://...)" />
+          </div>
+          <div class="row">
+            <input class="input" id="store-logo" placeholder="Logo image URL (or upload below)" />
+          </div>
+          <div class="row">
+            <input type="file" id="store-logo-file" accept="image/*" />
+          </div>
+          <button class="btn" id="store-add">Add to Store</button>
+        </div>
+        <div class="grid" id="store-grid"></div>
+      </div>
+
+      <!-- SOUNDBOARD -->
+      <div class="app" data-app="sound">
+        <h2>Soundboard</h2>
+        <div class="card">
+          <div style="color:var(--green);font-weight:bold;margin-bottom:10px;">Add a Sound</div>
+          <div class="row">
+            <input class="input" id="sound-name" placeholder="Sound name" />
+            <input class="input" id="sound-url" placeholder="Sound URL (mp3/wav)" />
+          </div>
+          <div class="row">
+            <input type="file" id="sound-file" accept="audio/*" />
+          </div>
+          <button class="btn" id="sound-add">Add Sound</button>
+        </div>
+        <div class="sounds" id="sounds-grid"></div>
+      </div>
+
+      <!-- CUSTOMIZE -->
+      <div class="app" data-app="custom">
+        <h2>Customize</h2>
+
+        <div class="card">
+          <div style="color:var(--green);font-weight:bold;margin-bottom:10px;">Profile Picture</div>
+          <div class="row">
+            <input class="input" id="pfp-url" placeholder="Image URL" />
+            <input type="file" id="pfp-file" accept="image/*" style="flex:0 0 220px;" />
+          </div>
+          <button class="btn" id="pfp-save">Set Profile Picture</button>
+        </div>
+
+        <div class="card">
+          <div style="color:var(--green);font-weight:bold;margin-bottom:10px;">Wallpaper</div>
+          <div class="row">
+            <input class="input" id="wall-url" placeholder="Image URL" />
+            <input type="file" id="wall-file" accept="image/*" style="flex:0 0 220px;" />
+          </div>
+          <button class="btn" id="wall-save">Set Wallpaper</button>
+          <button class="btn secondary" id="wall-reset" style="margin-left:10px;">Reset</button>
+        </div>
+      </div>
+
+      <!-- OWNER PANEL -->
+      <div class="app" data-app="owner">
+        <h2>👑 Owner Panel</h2>
+
+        <div class="card">
+          <div style="color:var(--green);font-weight:bold;margin-bottom:10px;">Promote / Demote Users</div>
+          <div class="row">
+            <input class="input" id="owner-promote-user" placeholder="Username" />
+            <button class="btn" id="owner-promote" style="flex:0 0 140px;">Promote to Owner</button>
+            <button class="btn danger" id="owner-demote" style="flex:0 0 100px;">Demote</button>
+          </div>
+          <div id="owners-list" style="margin-top:10px;color:#aaa;font-size:13px;"></div>
+        </div>
+
+        <div class="card">
+          <div style="color:var(--green);font-weight:bold;margin-bottom:10px;">Broadcast Global Message</div>
+          <div class="row">
+            <input class="input" id="owner-msg" placeholder="Message to all users..." />
+            <button class="btn" id="owner-broadcast" style="flex:0 0 120px;">Broadcast</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="owner-banner"></div>
+
+<script>
+/* ==========================================================================
+   LINKVAULT-360  —  frontend demo
+   All state lives in localStorage. Not secure. Not multi-user. Demo only.
+   ========================================================================== */
+
+const DB = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem('xv_' + k)) ?? d; } catch { return d; } },
+  set(k, v) { localStorage.setItem('xv_' + k, JSON.stringify(v)); },
+  del(k) { localStorage.removeItem('xv_' + k); }
+};
+
+// Seed owner account ryan/0101
+if (!DB.get('users')) {
+  DB.set('users', { ryan: { password: '0101', owner: true, pfp: '', friends: [] } });
+}
+
+let currentUser = null;
+let currentDM = null;
+
+/* ---------------- AUTH ---------------- */
+let authMode = 'signin';
+const $ = id => document.getElementById(id);
+
+$('auth-switch').onclick = () => {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  $('auth-title').textContent = authMode === 'signin' ? 'XBOX 360' : 'SIGN UP';
+  $('auth-submit').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+  $('auth-switch').textContent = authMode === 'signin' ? 'No account? Sign up' : 'Have an account? Sign in';
+  $('auth-err').textContent = '';
+};
+
+$('auth-submit').onclick = () => {
+  const u = $('auth-user').value.trim();
+  const p = $('auth-pass').value;
+  if (!u || !p) return showErr('Enter username and password');
+  const users = DB.get('users', {});
+
+  if (authMode === 'signup') {
+    if (users[u]) return showErr('Username already taken');
+    users[u] = { password: p, owner: false, pfp: '', friends: [] };
+    DB.set('users', users);
+    login(u);
+  } else {
+    if (!users[u] || users[u].password !== p) return showErr('Invalid username or password');
+    login(u);
+  }
+};
+
+function showErr(m) { $('auth-err').textContent = m; }
+
+function login(u) {
+  currentUser = u;
+  DB.set('session', u);
+  $('auth').style.display = 'none';
+  $('dash').classList.add('active');
+  refreshAll();
+}
+
+$('btn-logout').onclick = () => {
+  DB.del('session');
+  currentUser = null;
+  location.reload();
+};
+
+// Auto-login
+const sess = DB.get('session');
+if (sess && DB.get('users', {})[sess]) login(sess);
+
+/* ---------------- HELPERS ---------------- */
+function users() { return DB.get('users', {}); }
+function me() { return users()[currentUser] || {}; }
+function saveMe(patch) {
+  const u = users();
+  u[currentUser] = { ...u[currentUser], ...patch };
+  DB.set('users', u);
+}
+function now() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- BLADES ---------------- */
+document.querySelectorAll('.blade').forEach(b => {
+  b.onclick = () => switchApp(b.dataset.app);
+});
+function switchApp(name) {
+  document.querySelectorAll('.blade').forEach(b => b.classList.toggle('active', b.dataset.app === name));
+  document.querySelectorAll('.app').forEach(a => a.classList.toggle('active', a.dataset.app === name));
+  if (name === 'owner') renderOwners();
+  if (name === 'store') renderStore();
+  if (name === 'sound') renderSounds();
+  if (name === 'friends') renderFriends();
+}
+
+/* ---------------- REFRESH ---------------- */
+function refreshAll() {
+  const m = me();
+  $('top-name').textContent = currentUser;
+  $('home-name').textContent = currentUser;
+  if (m.pfp) {
+    $('top-pfp').src = m.pfp;
+    $('top-pfp').style.display = 'block';
+  } else {
+    $('top-pfp').style.display = 'none';
+  }
+  $('blade-owner').style.display = m.owner ? 'flex' : 'none';
+  if (m.wallpaper) {
+    document.body.style.background = `url("${m.wallpaper}") center/cover fixed, radial-gradient(circle at 50% 30%, #1a2a0a 0%, #050505 70%)`;
+  }
+  renderGlobalChat();
+  renderFriends();
+  renderStore();
+  renderSounds();
+  renderOwners();
+}
+
+/* ---------------- GLOBAL CHAT ---------------- */
+function renderGlobalChat() {
+  const msgs = DB.get('global_chat', []);
+  $('global-chat').innerHTML = msgs.map(m => {
+    const u = users()[m.user] || {};
+    return `<div class="msg">
+      <img src="${u.pfp || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23333%22/><text x=%2250%22 y=%2265%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%239dff00%22>${(m.user[0]||'?').toUpperCase()}</text></svg>'}" />
+      <div class="body">
+        <div class="name">${esc(m.user)} <span class="time">${m.time}</span></div>
+        <div class="text">${esc(m.text)}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:#666;text-align:center;padding:20px;">No messages yet. Say hi!</div>';
+  $('global-chat').scrollTop = $('global-chat').scrollHeight;
+}
+
+$('global-send').onclick = () => {
+  const t = $('global-input').value.trim();
+  if (!t) return;
+  const msgs = DB.get('global_chat', []);
+  msgs.push({ user: currentUser, text: t, time: now() });
+  DB.set('global_chat', msgs);
+  $('global-input').value = '';
+  renderGlobalChat();
+};
+$('global-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('global-send').click(); });
+
+// Broadcast banner (owner)
+function checkBanner() {
+  const b = DB.get('banner', null);
+  if (b && Date.now() - b.at < 60000) {
+    $('owner-banner').textContent = '📢 ' + b.text;
+    $('owner-banner').classList.add('show');
+    setTimeout(() => $('owner-banner').classList.remove('show'), 8000);
+  }
+}
+setInterval(checkBanner, 3000);
+checkBanner();
+
+/* ---------------- FRIENDS ---------------- */
+$('friend-add').onclick = () => {
+  const t = $('friend-input').value.trim();
+  if (!t) return;
+  if (t === currentUser) return alert("You can't add yourself");
+  if (!users()[t]) return alert('User does not exist');
+  const f = me().friends || [];
+  if (f.includes(t)) return alert('Already a friend');
+  f.push(t);
+  saveMe({ friends: f });
+  $('friend-input').value = '';
+  renderFriends();
+};
+
+function renderFriends() {
+  const f = me().friends || [];
+  $('friends-list').innerHTML = f.length
+    ? f.map(name => `<div class="card" style="display:flex;align-items:center;gap:12px;">
+        <img src="${users()[name]?.pfp || ''}" style="width:36px;height:36px;border-radius:50%;background:#222;" />
+        <div style="flex:1;">${esc(name)}</div>
+        <button class="btn secondary" onclick="openDM('${esc(name)}')">Message</button>
+      </div>`).join('')
+    : '<div style="color:#666;">No friends yet. Add someone by username above.</div>';
+}
+
+/* ---------------- DMs ---------------- */
+function dmKey(a, b) { return [a, b].sort().join('::'); }
+
+window.openDM = (name) => {
+  currentDM = name;
+  $('dm-active').textContent = 'Conversation with ' + name;
+  $('dm-input').disabled = false;
+  $('dm-send').disabled = false;
+  renderDM();
+};
+
+$('dm-open').onclick = () => {
+  const t = $('dm-target').value.trim();
+  if (!t) return;
+  if (!users()[t]) return alert('User does not exist');
+  openDM(t);
+};
+
+$('dm-send').onclick = () => {
+  if (!currentDM) return;
+  const t = $('dm-input').value.trim();
+  if (!t) return;
+  const key = dmKey(currentUser, currentDM);
+  const all = DB.get('dms', {});
+  (all[key] = all[key] || []).push({ from: currentUser, text: t, time: now() });
+  DB.set('dms', all);
+  $('dm-input').value = '';
+  renderDM();
+};
+$('dm-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('dm-send').click(); });
+
+function renderDM() {
+  if (!currentDM) return;
+  const key = dmKey(currentUser, currentDM);
+  const all = DB.get('dms', {});
+  const msgs = all[key] || [];
+  $('dm-chat').innerHTML = msgs.map(m => {
+    const u = users()[m.from] || {};
+    return `<div class="msg">
+      <img src="${u.pfp || ''}" style="background:#333;" />
+      <div class="body">
+        <div class="name">${esc(m.from)} <span class="time">${m.time}</span></div>
+        <div class="text">${esc(m.text)}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:#666;text-align:center;padding:20px;">No messages yet.</div>';
+  $('dm-chat').scrollTop = $('dm-chat').scrollHeight;
+}
+
+/* ---------------- AI (placeholder) ---------------- */
+$('ai-send').onclick = async () => {
+  const t = $('ai-input').value.trim();
+  if (!t) return;
+  pushAIMsg('You', t);
+  $('ai-input').value = '';
+
+  const endpoint = $('ai-endpoint').value.trim();
+  const key = $('ai-key').value.trim();
+
+  if (!endpoint || !key) {
+    pushAIMsg('AI', '[echo mode] ' + t + ' — (connect an API to enable real AI)');
+    return;
+  }
+  try {
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ message: t })
+    });
+    const data = await r.json();
+    pushAIMsg('AI', data.reply || data.message || JSON.stringify(data));
+  } catch (e) {
+    pushAIMsg('AI', 'Error: ' + e.message);
+  }
+};
+$('ai-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('ai-send').click(); });
+
+function pushAIMsg(who, text) {
+  const box = $('ai-chat');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `<div class="body"><div class="name">${esc(who)}</div><div class="text">${esc(text)}</div></div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ---------------- STORE ---------------- */
+$('store-add').onclick = () => {
+  const title = $('store-title').value.trim();
+  const link = $('store-link').value.trim();
+  let logo = $('store-logo').value.trim();
+  const file = $('store-logo-file').files[0];
+
+  const finalize = (logoData) => {
+    if (!title || !link) return alert('Title and link required');
+    const apps = DB.get('store', []);
+    apps.push({ title, link, logo: logoData || '' });
+    DB.set('store', apps);
+    $('store-title').value = $('store-link').value = $('store-logo').value = '';
+    $('store-logo-file').value = '';
+    renderStore();
+  };
+
+  if (file) {
+    const r = new FileReader();
+    r.onload = () => finalize(r.result);
+    r.readAsDataURL(file);
+  } else finalize(logo);
+};
+
+function renderStore() {
+  const apps = DB.get('store', []);
+  $('store-grid').innerHTML = apps.map((a, i) => `
+    <div class="app-card">
+      ${a.logo ? `<img src="${a.logo}" />` : `<div style="width:72px;height:72px;background:#222;border-radius:10px;margin:0 auto 8px;"></div>`}
+      <div class="title">${esc(a.title)}</div>
+      <a href="${esc(a.link)}" target="_blank" rel="noopener">Open</a>
+      <div style="margin-top:8px;"><button class="btn danger" style="font-size:11px;padding:4px 8px;" onclick="delApp(${i})">Delete</button></div>
+    </div>`).join('') || '<div style="color:#666;">No apps yet.</div>';
